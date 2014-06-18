@@ -10,6 +10,9 @@
 		65F1D3CC195039290077E785 /* SwiftParser.h in Headers */ = {isa = PBXBuildFile; fileRef = 65F1D3CB195039290077E785 /* SwiftParser.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		65F1D3D2195039290077E785 /* SwiftParser.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65F1D3C6195039290077E785 /* SwiftParser.framework */; };
 		65F1D3D9195039290077E785 /* SwiftParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F1D3D8195039290077E785 /* SwiftParserTests.swift */; };
+		65F1D3E3195039430077E785 /* Parser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F1D3E2195039430077E785 /* Parser.swift */; };
+		65F1D3E5195044B60077E785 /* Reader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F1D3E4195044B60077E785 /* Reader.swift */; };
+		65F1D3ED195049970077E785 /* StringReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F1D3EC195049970077E785 /* StringReader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -20,15 +23,40 @@
 			remoteGlobalIDString = 65F1D3C5195039290077E785;
 			remoteInfo = SwiftParser;
 		};
+		65F1D3E6195047E30077E785 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 65F1D3BD195039290077E785 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 65F1D3C5195039290077E785;
+			remoteInfo = SwiftParser;
+		};
+		65F1D3E8195047E30077E785 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 65F1D3BD195039290077E785 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 65F1D3C5195039290077E785;
+			remoteInfo = SwiftParser;
+		};
+		65F1D3EA195047EA0077E785 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 65F1D3BD195039290077E785 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 65F1D3C5195039290077E785;
+			remoteInfo = SwiftParser;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		6537612319515E8A00A519A3 /* MyPlayground.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; path = MyPlayground.playground; sourceTree = "<group>"; };
 		65F1D3C6195039290077E785 /* SwiftParser.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SwiftParser.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		65F1D3CA195039290077E785 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		65F1D3CB195039290077E785 /* SwiftParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftParser.h; sourceTree = "<group>"; };
 		65F1D3D1195039290077E785 /* SwiftParserTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwiftParserTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		65F1D3D7195039290077E785 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		65F1D3D8195039290077E785 /* SwiftParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftParserTests.swift; sourceTree = "<group>"; };
+		65F1D3E2195039430077E785 /* Parser.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Parser.swift; sourceTree = "<group>"; };
+		65F1D3E4195044B60077E785 /* Reader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Reader.swift; sourceTree = "<group>"; };
+		65F1D3EC195049970077E785 /* StringReader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringReader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +81,7 @@
 		65F1D3BC195039290077E785 = {
 			isa = PBXGroup;
 			children = (
+				6537612319515E8A00A519A3 /* MyPlayground.playground */,
 				65F1D3C8195039290077E785 /* SwiftParser */,
 				65F1D3D5195039290077E785 /* SwiftParserTests */,
 				65F1D3C7195039290077E785 /* Products */,
@@ -72,6 +101,9 @@
 			isa = PBXGroup;
 			children = (
 				65F1D3CB195039290077E785 /* SwiftParser.h */,
+				65F1D3E2195039430077E785 /* Parser.swift */,
+				65F1D3E4195044B60077E785 /* Reader.swift */,
+				65F1D3EC195049970077E785 /* StringReader.swift */,
 				65F1D3C9195039290077E785 /* Supporting Files */,
 			);
 			path = SwiftParser;
@@ -146,6 +178,9 @@
 			);
 			dependencies = (
 				65F1D3D4195039290077E785 /* PBXTargetDependency */,
+				65F1D3E7195047E30077E785 /* PBXTargetDependency */,
+				65F1D3E9195047E30077E785 /* PBXTargetDependency */,
+				65F1D3EB195047EA0077E785 /* PBXTargetDependency */,
 			);
 			name = SwiftParserTests;
 			productName = SwiftParserTests;
@@ -210,6 +245,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				65F1D3E5195044B60077E785 /* Reader.swift in Sources */,
+				65F1D3E3195039430077E785 /* Parser.swift in Sources */,
+				65F1D3ED195049970077E785 /* StringReader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -228,6 +266,21 @@
 			isa = PBXTargetDependency;
 			target = 65F1D3C5195039290077E785 /* SwiftParser */;
 			targetProxy = 65F1D3D3195039290077E785 /* PBXContainerItemProxy */;
+		};
+		65F1D3E7195047E30077E785 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 65F1D3C5195039290077E785 /* SwiftParser */;
+			targetProxy = 65F1D3E6195047E30077E785 /* PBXContainerItemProxy */;
+		};
+		65F1D3E9195047E30077E785 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 65F1D3C5195039290077E785 /* SwiftParser */;
+			targetProxy = 65F1D3E8195047E30077E785 /* PBXContainerItemProxy */;
+		};
+		65F1D3EB195047EA0077E785 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 65F1D3C5195039290077E785 /* SwiftParser */;
+			targetProxy = 65F1D3EA195047EA0077E785 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -316,6 +369,7 @@
 		65F1D3DD195039290077E785 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -327,12 +381,14 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
 		65F1D3DE195039290077E785 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
@@ -400,6 +456,7 @@
 				65F1D3DE195039290077E785 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		65F1D3DF195039290077E785 /* Build configuration list for PBXNativeTarget "SwiftParserTests" */ = {
 			isa = XCConfigurationList;
@@ -408,6 +465,7 @@
 				65F1D3E1195039290077E785 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
