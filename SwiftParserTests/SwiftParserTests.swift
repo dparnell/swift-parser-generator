@@ -113,21 +113,45 @@ class SwiftParserTests: XCTestCase {
         }
         
         override func rules() {
-            start_rule = (^"primary")*~*
+            start_rule = (^"primary")*!*
             
+            let number = ("0"-"9")+ => push
             add_named_rule("primary",   rule: ^"secondary" ~ (("+" ~ ^"secondary" => add) | ("-" ~ ^"secondary" => sub))*)
             add_named_rule("secondary", rule: ^"tertiary" ~ (("*" ~ ^"tertiary" => mul) | ("/" ~ ^"tertiary" => div))*)
-            add_named_rule("tertiary",  rule: ("(" ~ ^"primary" ~ ")") | (("0"-"9")+ => push))
+            add_named_rule("tertiary",  rule: ("(" ~ ^"primary" ~ ")") | number)
         }
     }
     
-    class Arith2 : Arith {
+    // A recursive parser like the following will always fail as it results in an infinite recursive loop.  Code has been added to try to catch this, but you have been warned!
+    class RecursiveArith : Arith {
         override func rules() {
-            start_rule = (^"term")*~*
+            start_rule = (^"term")*!*
             
-            var num = ("0"-"9")+ => push
+            let num = ("0"-"9")+ => push
             add_named_rule("term", rule: ((^"term" ~ "+" ~ ^"fact") => add) | ((^"term" ~ "-" ~ ^"fact") => sub) | ^"fact")
-            add_named_rule("fact", rule: ((^"fact" ~ "*" ~ ^"num") => mul) | ((^"fact" ~ "/" ~ ^"num") => div) | ("(" ~ ^"term" ~ ")") | num)
+            add_named_rule("fact", rule: ((^"fact" ~ "*" ~ ^"term") => mul) | ((^"fact" ~ "/" ~ ^"term") => div) | ("(" ~ ^"term" ~ ")") | num)
+        }
+    }
+    
+    class Added : Parser {
+        var stack: Int[] = []
+        
+        func push() {
+            stack.append(self.text.toInt()!)
+        }
+        
+        func add() {
+            let left = stack.removeLast()
+            let right = stack.removeLast()
+            
+            stack.append(left + right)
+        }
+        
+        override func rules() {
+            let number = ("0"-"9")+ => push
+            let expr = (number ~ "+" ~ number) => add
+            
+            start_rule = expr
         }
     }
     
@@ -154,23 +178,14 @@ class SwiftParserTests: XCTestCase {
     }
 
     func testRecursiveSimple() {
-        let a = Arith2()
-        a.debug_rules = true
-        let parsed = a.parse("1+2")
-        XCTAssert(parsed)
-        if(parsed) {
-            XCTAssertEqual(a.calculator.result, 3)
-        }
+        let a = RecursiveArith()
+        XCTAssertFalse(a.parse("1+2"))
     }
     
     func testRecursiveComplex() {
-        let a = Arith2()
+        let a = RecursiveArith()
         
-        let parsed = a.parse("6*7-3+20/2-12+(30-5)/5")
-        XCTAssert(parsed)
-        if(parsed) {
-            XCTAssertEqual(a.calculator.result, 42)
-        }
+        XCTAssertFalse(a.parse("6*7-3+20/2-12+(30-5)/5"))
     }
     
     func testShouldNotParse() {

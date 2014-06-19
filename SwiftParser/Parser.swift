@@ -13,8 +13,8 @@ typealias ParserAction = () -> ()
 
 
 // EOF operator
-operator postfix *~* {}
-@postfix func *~* (rule: ParserRule) -> ParserRule {
+operator postfix *!* {}
+@postfix func *!* (rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         return rule(parser: parser, reader: reader) && reader.eof()
     }
@@ -111,6 +111,10 @@ func literal(string:String) -> ParserRule {
     }
 }
 
+@prefix func !(lit: String) -> ParserRule {
+    return !literal(lit)
+}
+
 // match one or more
 operator postfix + {}
 @postfix func + (rule: ParserRule) -> ParserRule {
@@ -138,6 +142,11 @@ operator postfix + {}
     }
 }
 
+@postfix func + (lit: String) -> ParserRule {
+    return literal(lit)+
+}
+
+
 // match zero or more
 operator postfix * {}
 @postfix func * (rule: ParserRule) -> ParserRule {
@@ -153,6 +162,10 @@ operator postfix * {}
         
         return true
     }
+}
+
+@postfix func * (lit: String) -> ParserRule {
+    return literal(lit)*
 }
 
 // match either
