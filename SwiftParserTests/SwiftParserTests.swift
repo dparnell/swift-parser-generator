@@ -133,28 +133,6 @@ class SwiftParserTests: XCTestCase {
         }
     }
     
-    class Added : Parser {
-        var stack: Int[] = []
-        
-        func push() {
-            stack.append(self.text.toInt()!)
-        }
-        
-        func add() {
-            let left = stack.removeLast()
-            let right = stack.removeLast()
-            
-            stack.append(left + right)
-        }
-        
-        override func rules() {
-            let number = ("0"-"9")+ => push
-            let expr = (number ~ "+" ~ number) => add
-            
-            start_rule = expr
-        }
-    }
-    
     override func setUp() {
         super.setUp()
         // Put setup code here. This method is called before the invocation of each test method in the class.

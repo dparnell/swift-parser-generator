@@ -40,7 +40,7 @@ The following parsing operations are currently supported
 To have the parser call your code when a rule matches use the => operator.  For example:
 
     import SwiftParser
-    class Added : Parser {
+    class Adder : Parser {
         var stack: Int[] = []
         
         func push() {
