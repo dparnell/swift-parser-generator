@@ -48,6 +48,7 @@
 
 /* Begin PBXFileReference section */
 		6537612319515E8A00A519A3 /* MyPlayground.playground */ = {isa = PBXFileReference; lastKnownFileType = file.playground; path = MyPlayground.playground; sourceTree = "<group>"; };
+		659C3CD11964102E001D10F7 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		65F1D3C6195039290077E785 /* SwiftParser.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SwiftParser.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		65F1D3CA195039290077E785 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		65F1D3CB195039290077E785 /* SwiftParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftParser.h; sourceTree = "<group>"; };
@@ -81,6 +82,7 @@
 		65F1D3BC195039290077E785 = {
 			isa = PBXGroup;
 			children = (
+				659C3CD11964102E001D10F7 /* README.md */,
 				6537612319515E8A00A519A3 /* MyPlayground.playground */,
 				65F1D3C8195039290077E785 /* SwiftParser */,
 				65F1D3D5195039290077E785 /* SwiftParserTests */,

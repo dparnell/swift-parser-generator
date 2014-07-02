@@ -11,7 +11,6 @@ import Foundation
 typealias ParserRule = (parser: Parser, reader: Reader) -> Bool
 typealias ParserAction = () -> ()
 
-
 // EOF operator
 operator postfix *!* {}
 @postfix func *!* (rule: ParserRule) -> ParserRule {
@@ -157,7 +156,11 @@ operator postfix * {}
             println("zero or more")
         }
         do {
+            let pos = reader.position
             flag = rule(parser: parser, reader: reader)
+            if(!flag) {
+                reader.seek(pos)
+            }
         } while(flag)
         
         return true
@@ -166,6 +169,25 @@ operator postfix * {}
 
 @postfix func * (lit: String) -> ParserRule {
     return literal(lit)*
+}
+
+// optional
+operator postfix /~ {}
+@postfix func /~ (rule: ParserRule) -> ParserRule {
+    return {(parser: Parser, reader: Reader) -> Bool in
+        if(parser.debug_rules) {
+            println("optionally")
+        }
+        let pos = reader.position
+        if(!rule(parser: parser, reader: reader)) {
+            reader.seek(pos)
+        }
+        return true
+    }
+}
+
+@postfix func /~ (lit: String) -> ParserRule {
+    return literal(lit)/~
 }
 
 // match either
@@ -239,6 +261,11 @@ operator infix => {associativity right precedence 100}
     }
 }
 
+typealias ParserRuleDefinition = () -> ParserRule
+operator infix <- {}
+@infix func <- (left: Parser, right: ParserRuleDefinition) -> () {
+    left.rule_definitions.append(right)
+}
 
 class Parser {
     struct ParserCapture {
@@ -247,6 +274,8 @@ class Parser {
         var action: ParserAction
     }
     
+    var rule_definition: ParserRuleDefinition?
+    var rule_definitions: ParserRuleDefinition[] = []
     var start_rule: ParserRule?
     var debug_rules = false
     var captures: ParserCapture[] = []
@@ -269,6 +298,10 @@ class Parser {
         rules()
     }
     
+    init(rule_def: () -> ParserRule) {
+        rule_definition = rule_def
+    }
+    
     func add_named_rule(name:String, rule: ParserRule) {
         named_rules[name] = rule
     }
@@ -278,6 +311,10 @@ class Parser {
     }
     
     func parse(string: String) -> Bool {
+        if(!start_rule) {
+            start_rule = rule_definition!()
+        }
+        
         captures.removeAll(keepCapacity: true)
         current_capture = nil
         
@@ -300,3 +337,4 @@ class Parser {
         return false
     }
 }
+

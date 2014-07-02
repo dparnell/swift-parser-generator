@@ -34,6 +34,9 @@ The following parsing operations are currently supported
     // "a" followed by the rule named "blah"
     let rule = "a" ~ ^"blah"
 
+    // "a" optionally follewd by "b"
+    let rule = "a" ~ "b"/~
+
     // "a" followed by the end of input
     let rule = "a"*!*
 

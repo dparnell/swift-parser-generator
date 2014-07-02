@@ -132,7 +132,8 @@ class SwiftParserTests: XCTestCase {
             add_named_rule("fact", rule: ((^"fact" ~ "*" ~ ^"term") => mul) | ((^"fact" ~ "/" ~ ^"term") => div) | ("(" ~ ^"term" ~ ")") | num)
         }
     }
-    
+
+   
     override func setUp() {
         super.setUp()
         // Put setup code here. This method is called before the invocation of each test method in the class.
