@@ -31,7 +31,7 @@ class StringReader : Reader {
         let result = string[index]
         
         if index != string.endIndex {
-            index = index.succ()
+            index = index.successor()
         }
         
         return result;

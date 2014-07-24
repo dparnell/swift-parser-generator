@@ -12,7 +12,7 @@ import SwiftParser
 class SwiftParserTests: XCTestCase {
     
     class Calculator {
-        var stack: Double[] = []
+        var stack: [Double] = []
         var _negative = false
         
         var result: Double {
