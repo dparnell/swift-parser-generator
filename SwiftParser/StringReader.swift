@@ -8,11 +8,11 @@
 
 import Foundation
 
-class StringReader : Reader {
+public class StringReader : Reader {
     var string: String
     var index: String.Index
     
-    var position: Int {
+    public var position: Int {
         get {
             return distance(string.startIndex, index)
         }
@@ -23,25 +23,26 @@ class StringReader : Reader {
         index = string.startIndex;
     }
     
-    func seek(position:Int) {
+    public func seek(position:Int) {
         index = advance(string.startIndex, position)
     }
     
-    func read() -> Character {
-        let result = string[index]
-        
+    public func read() -> Character {
         if index != string.endIndex {
+            let result = string[index]
             index = index.successor()
+            
+            return result;
         }
         
-        return result;
+        return "\u{2004}";
     }
     
-    func eof() -> Bool {
+    public func eof() -> Bool {
         return index == string.endIndex
     }
     
-    func substring(starting_at:Int, ending_at:Int) -> String {
+    public func substring(starting_at:Int, ending_at:Int) -> String {
         return string.substringWithRange(Range<String.Index>(start: advance(string.startIndex, starting_at), end:  advance(string.startIndex, ending_at)))
     }
     

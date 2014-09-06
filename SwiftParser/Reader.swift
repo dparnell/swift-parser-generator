@@ -8,7 +8,7 @@
 
 import Foundation
 
-protocol Reader {
+public protocol Reader {
     var position: Int { get }
     
     func seek(position: Int)
