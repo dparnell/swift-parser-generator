@@ -299,15 +299,17 @@ public func <- (left: Parser, right: ParserRuleDefinition) -> () {
 }
 
 public class Parser {
-    struct ParserCapture : CustomStringConvertible {
+    public struct ParserCapture : CustomStringConvertible {
         var start: Int
         var end: Int
         var action: ParserAction
         let reader:Reader
-        var text:String {
+
+		var text: String {
             return reader.substring(start, ending_at:end)
         }
-        var description: String {
+
+        public var description: String {
             return "[\(start),\(end):\(text)]"
         }
     }
@@ -316,11 +318,13 @@ public class Parser {
     public var rule_definitions: [ParserRuleDefinition] = []
     public var start_rule: ParserRule?
     public var debug_rules = false
-    var captures: [ParserCapture] = []
-    var current_capture:ParserCapture?
-    var last_capture:ParserCapture?
-    var current_reader:Reader?
-    var named_rules: Dictionary<String,ParserRule> = Dictionary<String,ParserRule>()
+
+    public var captures: [ParserCapture] = []
+    public var current_capture:ParserCapture?
+    public var last_capture:ParserCapture?
+    public var current_reader:Reader?
+
+	var named_rules: Dictionary<String,ParserRule> = Dictionary<String,ParserRule>()
     var current_named_rule = ""
 
     public var text:String {
