@@ -15,4 +15,5 @@ public protocol Reader {
     func read() -> Character
     func substring(starting_at:Int, ending_at:Int) -> String
     func eof() -> Bool
+    func remainder() -> String
 }

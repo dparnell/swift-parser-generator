@@ -42,6 +42,10 @@ public class StringReader : Reader {
         return index == string.endIndex
     }
     
+    public func remainder() -> String {
+      return string.substringFromIndex(index)
+    }
+  
     public func substring(starting_at:Int, ending_at:Int) -> String {
         return string.substringWithRange(Range<String.Index>(start: string.startIndex.advancedBy(starting_at), end:  string.startIndex.advancedBy(ending_at)))
     }
