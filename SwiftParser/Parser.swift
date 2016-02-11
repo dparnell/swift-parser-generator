@@ -283,6 +283,7 @@ public class Parser {
     public var debug_rules = false
     var captures: [ParserCapture] = []
     var current_capture:ParserCapture?
+    var last_capture:ParserCapture?
     var current_reader:Reader?
     var named_rules: Dictionary<String,ParserRule> = Dictionary<String,ParserRule>()
     var current_named_rule = ""
@@ -320,6 +321,7 @@ public class Parser {
         
         captures.removeAll(keepCapacity: true)
         current_capture = nil
+        last_capture = nil
         
         let reader = StringReader(string: string)
         
@@ -327,13 +329,14 @@ public class Parser {
             current_reader = reader
             
             for capture in captures {
+                last_capture = current_capture
                 current_capture = capture
-                
                 capture.action()
             }
 
             current_reader = nil
             current_capture = nil
+            last_capture = nil
             return true
         }
         
