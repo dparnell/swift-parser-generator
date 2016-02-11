@@ -20,8 +20,8 @@ class SwiftParserTests: XCTestCase {
         }
         
         func performBinaryOperation(op: (left: Double, right: Double) -> Double) {
-            var right = stack.removeLast()
-            var left = stack.removeLast()
+            let right = stack.removeLast()
+            let left = stack.removeLast()
             
             stack.append(op(left: left, right: right))
         }

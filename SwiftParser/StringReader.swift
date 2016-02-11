@@ -14,7 +14,7 @@ public class StringReader : Reader {
     
     public var position: Int {
         get {
-            return distance(string.startIndex, index)
+            return string.startIndex.distanceTo(index)
         }
     }
     
@@ -24,7 +24,7 @@ public class StringReader : Reader {
     }
     
     public func seek(position:Int) {
-        index = advance(string.startIndex, position)
+        index = string.startIndex.advancedBy(position)
     }
     
     public func read() -> Character {
@@ -43,7 +43,7 @@ public class StringReader : Reader {
     }
     
     public func substring(starting_at:Int, ending_at:Int) -> String {
-        return string.substringWithRange(Range<String.Index>(start: advance(string.startIndex, starting_at), end:  advance(string.startIndex, ending_at)))
+        return string.substringWithRange(Range<String.Index>(start: string.startIndex.advancedBy(starting_at), end:  string.startIndex.advancedBy(ending_at)))
     }
     
 }

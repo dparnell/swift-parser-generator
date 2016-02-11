@@ -24,7 +24,7 @@ prefix operator ^ {}
 public prefix func ^(name:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         if(parser.debug_rules) {
-            println("named rule: \(name)")
+            print("named rule: \(name)")
         }
         // check to see if this would cause a recursive loop?
         if(parser.current_named_rule != name) {
@@ -36,13 +36,13 @@ public prefix func ^(name:String) -> ParserRule {
             parser.current_named_rule = old_named_rule
             
             if(parser.debug_rules) {
-                println("\t\(result)")
+                print("\t\(result)")
             }
             return result
         }
         
         if(parser.debug_rules) {
-            println("\tfalse - blocked")
+            print("\tfalse - blocked")
         }
         return false
     }
@@ -52,27 +52,27 @@ public prefix func ^(name:String) -> ParserRule {
 public func literal(string:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         if(parser.debug_rules) {
-            println("literal '\(string)'")
+            print("literal '\(string)'")
         }
         let pos = reader.position
         
-        for ch in string {
+        for ch in string.characters {
             let flag = ch == reader.read()
             if(parser.debug_rules) {
-                println("\t\t\(ch) - \(flag)")
+                print("\t\t\(ch) - \(flag)")
             }
             if !flag {
                 reader.seek(pos)
                 
                 if(parser.debug_rules) {
-                    println("\tfalse")
+                    print("\tfalse")
                 }
                 return false
             }
         }
         
         if(parser.debug_rules) {
-            println("\ttrue")
+            print("\ttrue")
         }
         return true
     }
@@ -82,7 +82,7 @@ public func literal(string:String) -> ParserRule {
 public func - (left: Character, right: Character) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         if(parser.debug_rules) {
-            println("range [\(left)-\(right)]")
+            print("range [\(left)-\(right)]")
         }
         
         let pos = reader.position
@@ -92,7 +92,7 @@ public func - (left: Character, right: Character) -> ParserRule {
         let ch = String(reader.read())
         let found = (lower <= ch) && (ch <= upper)
         if(parser.debug_rules) {
-            println("\t\t\(ch) - \(found)")
+            print("\t\t\(ch) - \(found)")
         }
         
         if(!found) {
@@ -123,9 +123,9 @@ public postfix func + (rule: ParserRule) -> ParserRule {
         var flag: Bool
 
         if(parser.debug_rules) {
-            println("one or more")
+            print("one or more")
         }
-        do {
+        repeat {
             flag = rule(parser: parser, reader: reader)
             found = found || flag
         } while(flag)
@@ -135,7 +135,7 @@ public postfix func + (rule: ParserRule) -> ParserRule {
         }
         
         if(parser.debug_rules) {
-            println("\t\(found)")
+            print("\t\(found)")
         }
         return found
     }
@@ -153,9 +153,9 @@ public postfix func * (rule: ParserRule) -> ParserRule {
         var flag: Bool
         
         if(parser.debug_rules) {
-            println("zero or more")
+            print("zero or more")
         }
-        do {
+        repeat {
             let pos = reader.position
             flag = rule(parser: parser, reader: reader)
             if(!flag) {
@@ -176,7 +176,7 @@ postfix operator /~ {}
 public postfix func /~ (rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         if(parser.debug_rules) {
-            println("optionally")
+            print("optionally")
         }
         let pos = reader.position
         if(!rule(parser: parser, reader: reader)) {
@@ -285,7 +285,7 @@ public class Parser {
 
     public var text:String {
         get {
-            if let capture = current_capture? {
+            if let capture = current_capture {
                 return current_reader!.substring(capture.start, ending_at: capture.end)
             }
             
