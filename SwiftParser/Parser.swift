@@ -43,6 +43,40 @@ public prefix func ^(name:String) -> ParserRule {
     }
 }
 
+// match a regex
+prefix operator %! {}
+public prefix func %!(pattern:String) -> ParserRule {
+    return {(parser: Parser, reader: Reader) -> Bool in
+        parser.enter("regex '\(pattern)'")
+        
+        let pos = reader.position
+        
+        var found = true
+        let remainder = reader.remainder()
+        do {
+            let re = try NSRegularExpression(pattern: pattern, options: [])
+            let target = remainder as NSString
+            let match = re.firstMatchInString(remainder, options: [], range: NSMakeRange(0, target.length))
+            if let m = match {
+                let res = target.substringWithRange(m.range)
+                // reset to end of match
+                reader.seek(pos + res.characters.count)
+                
+                parser.leave("regex", true)
+                return true
+            }
+        } catch _ as NSError {
+            found = false
+        }
+        
+        if(!found) {
+            reader.seek(pos)
+            parser.leave("regex", false)
+        }
+        return false
+    }
+}
+
 // match a literal string
 prefix operator % {}
 public prefix func %(lit:String) -> ParserRule {
