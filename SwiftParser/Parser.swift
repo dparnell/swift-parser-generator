@@ -44,6 +44,11 @@ public prefix func ^(name:String) -> ParserRule {
 }
 
 // match a literal string
+prefix operator % {}
+public prefix func %(lit:String) -> ParserRule {
+    return literal(lit)
+}
+
 public func literal(string:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("literal '\(string)'")
