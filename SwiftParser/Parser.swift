@@ -242,7 +242,7 @@ public func => (rule : ParserRule, action: ParserAction) -> ParserRule {
         parser.enter("=>")
         
         if(rule(parser: parser, reader: reader)) {
-            let capture = Parser.ParserCapture(start: start, end: reader.position, action: action)
+            let capture = Parser.ParserCapture(start: start, end: reader.position, action: action, reader: reader)
             
             parser.captures.append(capture)
             parser.leave("=>", true)
@@ -264,10 +264,17 @@ public func <- (left: Parser, right: ParserRuleDefinition) -> () {
 }
 
 public class Parser {
-    struct ParserCapture {
+    struct ParserCapture : CustomStringConvertible {
         var start: Int
         var end: Int
         var action: ParserAction
+        let reader:Reader
+        var text:String {
+            return reader.substring(start, ending_at:end)
+        }
+        var description: String {
+            return "[\(start),\(end):\(text)]"
+        }
     }
     
     public var rule_definition: ParserRuleDefinition?
@@ -283,7 +290,7 @@ public class Parser {
     public var text:String {
         get {
             if let capture = current_capture {
-                return current_reader!.substring(capture.start, ending_at: capture.end)
+                return capture.text
             }
             
             return ""
