@@ -52,9 +52,6 @@ public func literal(string:String) -> ParserRule {
         
         for ch in string.characters {
             let flag = ch == reader.read()
-            if(parser.debug_rules) {
-                print("\t\t\(ch) - \(flag)")
-            }
             if !flag {
                 reader.seek(pos)
                 
