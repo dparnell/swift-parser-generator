@@ -14,7 +14,7 @@ class Foobar {
 }
 
 
-var x = Foobar { println("Stuff") }
+var x = Foobar { print("Stuff") }
 
 
 x.go()

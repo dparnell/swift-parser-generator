@@ -40,6 +40,12 @@ The following parsing operations are currently supported
     // "a" followed by the end of input
     let rule = "a"*!*
 
+    // a single "," 
+    let rule = %","
+        
+    // regular expression: consecutive word or space characters
+    let rule = %!"[\\w\\s]+"
+
 To have the parser call your code when a rule matches use the => operator.  For example:
 
     import SwiftParser

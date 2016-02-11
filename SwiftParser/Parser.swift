@@ -23,9 +23,8 @@ public postfix func *!* (rule: ParserRule) -> ParserRule {
 prefix operator ^ {}
 public prefix func ^(name:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
-        if(parser.debug_rules) {
-            println("named rule: \(name)")
-        }
+        parser.enter("named rule: \(name)")
+        
         // check to see if this would cause a recursive loop?
         if(parser.current_named_rule != name) {
             let old_named_rule = parser.current_named_rule
@@ -35,45 +34,72 @@ public prefix func ^(name:String) -> ParserRule {
             let result = rule!(parser: parser, reader: reader)
             parser.current_named_rule = old_named_rule
             
-            if(parser.debug_rules) {
-                println("\t\(result)")
-            }
+            parser.leave("named rule: \(name)",result)
             return result
         }
         
-        if(parser.debug_rules) {
-            println("\tfalse - blocked")
+        parser.leave("named rule: - blocked", false)
+        return false
+    }
+}
+
+// match a regex
+prefix operator %! {}
+public prefix func %!(pattern:String) -> ParserRule {
+    return {(parser: Parser, reader: Reader) -> Bool in
+        parser.enter("regex '\(pattern)'")
+        
+        let pos = reader.position
+        
+        var found = true
+        let remainder = reader.remainder()
+        do {
+            let re = try NSRegularExpression(pattern: pattern, options: [])
+            let target = remainder as NSString
+            let match = re.firstMatchInString(remainder, options: [], range: NSMakeRange(0, target.length))
+            if let m = match {
+                let res = target.substringWithRange(m.range)
+                // reset to end of match
+                reader.seek(pos + res.characters.count)
+                
+                parser.leave("regex", true)
+                return true
+            }
+        } catch _ as NSError {
+            found = false
+        }
+        
+        if(!found) {
+            reader.seek(pos)
+            parser.leave("regex", false)
         }
         return false
     }
 }
 
 // match a literal string
+prefix operator % {}
+public prefix func %(lit:String) -> ParserRule {
+    return literal(lit)
+}
+
 public func literal(string:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
-        if(parser.debug_rules) {
-            println("literal '\(string)'")
-        }
+        parser.enter("literal '\(string)'")
+        
         let pos = reader.position
         
-        for ch in string {
+        for ch in string.characters {
             let flag = ch == reader.read()
-            if(parser.debug_rules) {
-                println("\t\t\(ch) - \(flag)")
-            }
             if !flag {
                 reader.seek(pos)
                 
-                if(parser.debug_rules) {
-                    println("\tfalse")
-                }
+                parser.leave("literal", false)
                 return false
             }
         }
         
-        if(parser.debug_rules) {
-            println("\ttrue")
-        }
+        parser.leave("literal", true)
         return true
     }
 }
@@ -81,9 +107,7 @@ public func literal(string:String) -> ParserRule {
 // match a range of characters eg: "0"-"9"
 public func - (left: Character, right: Character) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
-        if(parser.debug_rules) {
-            println("range [\(left)-\(right)]")
-        }
+        parser.enter("range [\(left)-\(right)]")
         
         let pos = reader.position
         
@@ -91,9 +115,7 @@ public func - (left: Character, right: Character) -> ParserRule {
         let upper = String(right)
         let ch = String(reader.read())
         let found = (lower <= ch) && (ch <= upper)
-        if(parser.debug_rules) {
-            println("\t\t\(ch) - \(found)")
-        }
+        parser.leave("range \t\t\(ch)", found)
         
         if(!found) {
             reader.seek(pos)
@@ -122,10 +144,9 @@ public postfix func + (rule: ParserRule) -> ParserRule {
         var found = false
         var flag: Bool
 
-        if(parser.debug_rules) {
-            println("one or more")
-        }
-        do {
+        parser.enter("one or more")
+        
+        repeat {
             flag = rule(parser: parser, reader: reader)
             found = found || flag
         } while(flag)
@@ -134,9 +155,7 @@ public postfix func + (rule: ParserRule) -> ParserRule {
             reader.seek(pos)
         }
         
-        if(parser.debug_rules) {
-            println("\t\(found)")
-        }
+        parser.leave("one or more", found)
         return found
     }
 }
@@ -151,18 +170,20 @@ postfix operator * {}
 public postfix func * (rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         var flag: Bool
+        var matched = false
+        parser.enter("zero or more")
         
-        if(parser.debug_rules) {
-            println("zero or more")
-        }
-        do {
+        repeat {
             let pos = reader.position
             flag = rule(parser: parser, reader: reader)
             if(!flag) {
                 reader.seek(pos)
+            } else {
+                matched = true
             }
         } while(flag)
         
+        parser.leave("zero or more", matched)
         return true
     }
 }
@@ -175,13 +196,14 @@ public postfix func * (lit: String) -> ParserRule {
 postfix operator /~ {}
 public postfix func /~ (rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
-        if(parser.debug_rules) {
-            println("optionally")
-        }
+        parser.enter("optionally")
+        
         let pos = reader.position
         if(!rule(parser: parser, reader: reader)) {
             reader.seek(pos)
         }
+
+        parser.leave("optionally", true)
         return true
     }
 }
@@ -205,6 +227,7 @@ public func | (left: ParserRule, right: String) -> ParserRule {
 
 public func | (left: ParserRule, right: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
+        parser.enter("|")
         let pos = reader.position
         var result = left(parser: parser, reader: reader)
         if(!result) {
@@ -215,6 +238,7 @@ public func | (left: ParserRule, right: ParserRule) -> ParserRule {
             reader.seek(pos)
         }
         
+        parser.leave("|", result)
         return result
     }
 }
@@ -235,7 +259,10 @@ public func ~ (left: ParserRule, right: String) -> ParserRule {
 
 public func ~ (left : ParserRule, right: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
-        return left(parser: parser, reader: reader) && right(parser: parser, reader: reader)
+        parser.enter("~")
+        let res = left(parser: parser, reader: reader) && right(parser: parser, reader: reader)
+        parser.leave("~", res)
+        return res
     }
 }
 
@@ -246,16 +273,20 @@ public func => (rule : ParserRule, action: ParserAction) -> ParserRule {
         let start = reader.position
         let capture_count = parser.captures.count
         
+        parser.enter("=>")
+        
         if(rule(parser: parser, reader: reader)) {
-            let capture = Parser.ParserCapture(start: start, end: reader.position, action: action)
+            let capture = Parser.ParserCapture(start: start, end: reader.position, action: action, reader: reader)
             
             parser.captures.append(capture)
+            parser.leave("=>", true)
             return true
         }
         
         while(parser.captures.count > capture_count) {
             parser.captures.removeLast()
         }
+        parser.leave("=>", false)
         return false
     }
 }
@@ -267,10 +298,17 @@ public func <- (left: Parser, right: ParserRuleDefinition) -> () {
 }
 
 public class Parser {
-    struct ParserCapture {
+    struct ParserCapture : CustomStringConvertible {
         var start: Int
         var end: Int
         var action: ParserAction
+        let reader:Reader
+        var text:String {
+            return reader.substring(start, ending_at:end)
+        }
+        var description: String {
+            return "[\(start),\(end):\(text)]"
+        }
     }
     
     public var rule_definition: ParserRuleDefinition?
@@ -279,14 +317,15 @@ public class Parser {
     public var debug_rules = false
     var captures: [ParserCapture] = []
     var current_capture:ParserCapture?
+    var last_capture:ParserCapture?
     var current_reader:Reader?
     var named_rules: Dictionary<String,ParserRule> = Dictionary<String,ParserRule>()
     var current_named_rule = ""
 
     public var text:String {
         get {
-            if let capture = current_capture? {
-                return current_reader!.substring(capture.start, ending_at: capture.end)
+            if let capture = current_capture {
+                return capture.text
             }
             
             return ""
@@ -316,6 +355,7 @@ public class Parser {
         
         captures.removeAll(keepCapacity: true)
         current_capture = nil
+        last_capture = nil
         
         let reader = StringReader(string: string)
         
@@ -323,17 +363,46 @@ public class Parser {
             current_reader = reader
             
             for capture in captures {
+                last_capture = current_capture
                 current_capture = capture
-                
                 capture.action()
             }
 
             current_reader = nil
             current_capture = nil
+            last_capture = nil
             return true
         }
         
         return false
     }
+    
+    var depth = 0
+    func leave(name:String) {
+        if(debug_rules) {
+            self.out("-- \(name)")
+        }
+        depth--
+    }
+    func leave(name:String, _ res:Bool) {
+        if(debug_rules) {
+            self.out("-- \(name):\t\(res)")
+        }
+        depth--
+    }
+    func enter(name:String) {
+        depth++
+        if(debug_rules) {
+            self.out("++ \(name)")
+        }
+    }
+    func out(name:String) {
+        var spaces = ""
+        for _ in 0..<depth-1 {
+            spaces += "  "
+        }
+        print("\(spaces)\(name)")
+    }
+    
 }
 
