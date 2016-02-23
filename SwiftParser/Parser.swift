@@ -303,6 +303,9 @@ public class Parser {
         var start: Int
         var end: Int
         var action: ParserAction
+        public var start: Int
+        public var end: Int
+        public var action: ParserAction
         let reader:Reader
 
 		var text: String {
