@@ -231,6 +231,7 @@ public func | (left: ParserRule, right: ParserRule) -> ParserRule {
         let pos = reader.position
         var result = left(parser: parser, reader: reader)
         if(!result) {
+			reader.seek(pos)
             result = right(parser: parser, reader: reader)
         }
     
