@@ -16,6 +16,13 @@ The following parsing operations are currently supported
     // "a" followed by "b"
     let rule = "a" ~ "b"
 
+	// "a" followed by "b", with possible whitespace in between
+	// to change what is considered whitespace, change the parser.whitespace rule
+	let rule = "a" ~~ "b"
+
+	// at least one "a", but possibly more
+	let rule = "a"++
+
     // "a" or "b"
     let rule = "a" | "b"
 

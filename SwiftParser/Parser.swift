@@ -231,6 +231,7 @@ public func | (left: ParserRule, right: ParserRule) -> ParserRule {
         let pos = reader.position
         var result = left(parser: parser, reader: reader)
         if(!result) {
+			reader.seek(pos)
             result = right(parser: parser, reader: reader)
         }
     
@@ -291,6 +292,31 @@ public func => (rule : ParserRule, action: ParserAction) -> ParserRule {
     }
 }
 
+/** The ~~ operator matches two following elements, optionally with whitespace (Parser.whitespace) in between. */
+infix operator  ~~ {associativity left precedence 10}
+public func ~~ (left: String, right: String) -> ParserRule {
+	return literal(left) ~~ literal(right)
+}
+
+public func ~~ (left: String, right: ParserRule) -> ParserRule {
+	return literal(left) ~~ right
+}
+
+public func ~~ (left: ParserRule, right: String) -> ParserRule {
+	return left ~~ literal(right)
+}
+
+public func ~~ (left : ParserRule, right: ParserRule) -> ParserRule {
+	return {(parser: Parser, reader: Reader) -> Bool in
+		return left(parser: parser, reader: reader) && parser.whitespace(parser: parser, reader: reader) && right(parser: parser, reader: reader)
+	}
+}
+
+/** Parser rule that matches the given parser rule at least once, but possibly more */
+public postfix func ++ (left: ParserRule) -> ParserRule {
+	return left ~~ left*
+}
+
 public typealias ParserRuleDefinition = () -> ParserRule
 infix operator <- {}
 public func <- (left: Parser, right: ParserRuleDefinition) -> () {
@@ -298,15 +324,17 @@ public func <- (left: Parser, right: ParserRuleDefinition) -> () {
 }
 
 public class Parser {
-    struct ParserCapture : CustomStringConvertible {
-        var start: Int
-        var end: Int
-        var action: ParserAction
+    public struct ParserCapture : CustomStringConvertible {
+        public var start: Int
+        public var end: Int
+        public var action: ParserAction
         let reader:Reader
-        var text:String {
+
+		var text: String {
             return reader.substring(start, ending_at:end)
         }
-        var description: String {
+
+        public var description: String {
             return "[\(start),\(end):\(text)]"
         }
     }
@@ -315,12 +343,18 @@ public class Parser {
     public var rule_definitions: [ParserRuleDefinition] = []
     public var start_rule: ParserRule?
     public var debug_rules = false
-    var captures: [ParserCapture] = []
-    var current_capture:ParserCapture?
-    var last_capture:ParserCapture?
-    var current_reader:Reader?
-    var named_rules: Dictionary<String,ParserRule> = Dictionary<String,ParserRule>()
+
+    public var captures: [ParserCapture] = []
+    public var current_capture:ParserCapture?
+    public var last_capture:ParserCapture?
+    public var current_reader:Reader?
+
+	var named_rules: Dictionary<String,ParserRule> = Dictionary<String,ParserRule>()
     var current_named_rule = ""
+
+	/** This rule determines what is seen as 'whitespace' by the '~~'  operator, which allows whitespace between two
+	 following items.*/
+	public var whitespace: ParserRule = (" " | "\t" | "\r\n" | "\r" | "\n")*
 
     public var text:String {
         get {
