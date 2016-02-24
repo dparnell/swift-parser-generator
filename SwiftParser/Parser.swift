@@ -312,6 +312,11 @@ public func ~~ (left : ParserRule, right: ParserRule) -> ParserRule {
 	}
 }
 
+/** Parser rule that matches the given parser rule at least once, but possibly more */
+public postfix func ++ (left: ParserRule) -> ParserRule {
+	return left ~~ left*
+}
+
 public typealias ParserRuleDefinition = () -> ParserRule
 infix operator <- {}
 public func <- (left: Parser, right: ParserRuleDefinition) -> () {
