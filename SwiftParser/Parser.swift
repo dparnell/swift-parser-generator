@@ -292,6 +292,26 @@ public func => (rule : ParserRule, action: ParserAction) -> ParserRule {
     }
 }
 
+/** The ~~ operator matches two following elements, optionally with whitespace (Parser.whitespace) in between. */
+infix operator  ~~ {associativity left precedence 10}
+public func ~~ (left: String, right: String) -> ParserRule {
+	return literal(left) ~~ literal(right)
+}
+
+public func ~~ (left: String, right: ParserRule) -> ParserRule {
+	return literal(left) ~~ right
+}
+
+public func ~~ (left: ParserRule, right: String) -> ParserRule {
+	return left ~~ literal(right)
+}
+
+public func ~~ (left : ParserRule, right: ParserRule) -> ParserRule {
+	return {(parser: Parser, reader: Reader) -> Bool in
+		return left(parser: parser, reader: reader) && parser.whitespace(parser: parser, reader: reader) && right(parser: parser, reader: reader)
+	}
+}
+
 public typealias ParserRuleDefinition = () -> ParserRule
 infix operator <- {}
 public func <- (left: Parser, right: ParserRuleDefinition) -> () {
@@ -300,9 +320,6 @@ public func <- (left: Parser, right: ParserRuleDefinition) -> () {
 
 public class Parser {
     public struct ParserCapture : CustomStringConvertible {
-        var start: Int
-        var end: Int
-        var action: ParserAction
         public var start: Int
         public var end: Int
         public var action: ParserAction
@@ -329,6 +346,10 @@ public class Parser {
 
 	var named_rules: Dictionary<String,ParserRule> = Dictionary<String,ParserRule>()
     var current_named_rule = ""
+
+	/** This rule determines what is seen as 'whitespace' by the '~~'  operator, which allows whitespace between two
+	 following items.*/
+	public var whitespace: ParserRule = (" " | "\t" | "\r\n" | "\r" | "\n")*
 
     public var text:String {
         get {
