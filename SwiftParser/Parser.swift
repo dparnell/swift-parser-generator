@@ -416,16 +416,16 @@ public class Parser {
         if(debug_rules) {
             self.out("-- \(name)")
         }
-        depth--
+        depth -= 1
     }
     func leave(name:String, _ res:Bool) {
         if(debug_rules) {
             self.out("-- \(name):\t\(res)")
         }
-        depth--
+        depth -= 1
     }
     func enter(name:String) {
-        depth++
+        depth += 1
         if(debug_rules) {
             self.out("++ \(name)")
         }
