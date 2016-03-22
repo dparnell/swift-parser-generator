@@ -47,7 +47,7 @@ public class StringReader : Reader {
     }
   
     public func substring(starting_at:Int, ending_at:Int) -> String {
-        return string.substringWithRange(Range<String.Index>(start: string.startIndex.advancedBy(starting_at), end:  string.startIndex.advancedBy(ending_at)))
+        return string.substringWithRange(string.startIndex.advancedBy(starting_at)..<string.startIndex.advancedBy(ending_at))
     }
     
 }
