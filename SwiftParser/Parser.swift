@@ -54,11 +54,11 @@ public prefix func %!(pattern:String) -> ParserRule {
         var found = true
         let remainder = reader.remainder()
         do {
-            let re = try NSRegularExpression(pattern: pattern, options: [])
+            let re = try RegularExpression(pattern: pattern, options: [])
             let target = remainder as NSString
-            let match = re.firstMatchInString(remainder, options: [], range: NSMakeRange(0, target.length))
+            let match = re.firstMatch(in: remainder, options: [], range: NSMakeRange(0, target.length))
             if let m = match {
-                let res = target.substringWithRange(m.range)
+                let res = target.substring(with: m.range)
                 // reset to end of match
                 reader.seek(pos + res.characters.count)
                 
@@ -83,7 +83,7 @@ public prefix func %(lit:String) -> ParserRule {
     return literal(lit)
 }
 
-public func literal(string:String) -> ParserRule {
+public func literal(_ string:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("literal '\(string)'")
         
@@ -374,7 +374,7 @@ public class Parser {
         rule_definition = rule_def
     }
     
-    public func add_named_rule(name:String, rule: ParserRule) {
+    public func add_named_rule(_ name:String, rule: ParserRule) {
         named_rules[name] = rule
     }
     
@@ -382,12 +382,12 @@ public class Parser {
         
     }
     
-    public func parse(string: String) -> Bool {
+    public func parse(_ string: String) -> Bool {
         if(start_rule == nil) {
             start_rule = rule_definition!()
         }
         
-        captures.removeAll(keepCapacity: true)
+        captures.removeAll(keepingCapacity: true)
         current_capture = nil
         last_capture = nil
         
@@ -412,25 +412,25 @@ public class Parser {
     }
     
     var depth = 0
-    func leave(name:String) {
+    func leave(_ name:String) {
         if(debug_rules) {
             self.out("-- \(name)")
         }
         depth -= 1
     }
-    func leave(name:String, _ res:Bool) {
+    func leave(_ name:String, _ res:Bool) {
         if(debug_rules) {
             self.out("-- \(name):\t\(res)")
         }
         depth -= 1
     }
-    func enter(name:String) {
+    func enter(_ name:String) {
         depth += 1
         if(debug_rules) {
             self.out("++ \(name)")
         }
     }
-    func out(name:String) {
+    func out(_ name:String) {
         var spaces = ""
         for _ in 0..<depth-1 {
             spaces += "  "

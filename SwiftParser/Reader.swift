@@ -11,9 +11,9 @@ import Foundation
 public protocol Reader {
     var position: Int { get }
     
-    func seek(position: Int)
+    func seek(_ position: Int)
     func read() -> Character
-    func substring(starting_at:Int, ending_at:Int) -> String
+    func substring(_ starting_at:Int, ending_at:Int) -> String
     func eof() -> Bool
     func remainder() -> String
 }
