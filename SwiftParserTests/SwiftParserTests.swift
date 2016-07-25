@@ -19,7 +19,7 @@ class SwiftParserTests: XCTestCase {
         get { return stack[stack.count-1] }
         }
         
-        func performBinaryOperation(op: (left: Double, right: Double) -> Double) {
+        func performBinaryOperation(_ op: (left: Double, right: Double) -> Double) {
             let right = stack.removeLast()
             let left = stack.removeLast()
             
@@ -62,7 +62,7 @@ class SwiftParserTests: XCTestCase {
             _negative = !_negative
         }
         
-        func pushNumber(text: String) {
+        func pushNumber(_ text: String) {
             var value: Double = 0
             var decimal = -1
             var counter = 0
