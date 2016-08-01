@@ -54,7 +54,7 @@ public prefix func %!(pattern:String) -> ParserRule {
         var found = true
         let remainder = reader.remainder()
         do {
-            let re = try RegularExpression(pattern: pattern, options: [])
+            let re = try NSRegularExpression(pattern: pattern, options: [])
             let target = remainder as NSString
             let match = re.firstMatch(in: remainder, options: [], range: NSMakeRange(0, target.length))
             if let m = match {
