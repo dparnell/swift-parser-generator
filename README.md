@@ -1,3 +1,5 @@
+[![Codewake](https://www.codewake.com/badges/ask_question.svg)](https://www.codewake.com/p/swift-parser-generator)
+
 swift-parser-generator
 ======================
 
