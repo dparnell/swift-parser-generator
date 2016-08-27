@@ -19,11 +19,11 @@ class SwiftParserTests: XCTestCase {
         get { return stack[stack.count-1] }
         }
         
-        func performBinaryOperation(_ op: (left: Double, right: Double) -> Double) {
+        func performBinaryOperation(_ op: (_ left: Double, _ right: Double) -> Double) {
             let right = stack.removeLast()
             let left = stack.removeLast()
             
-            stack.append(op(left: left, right: right))
+            stack.append(op(left, right))
         }
         
         func add() {
