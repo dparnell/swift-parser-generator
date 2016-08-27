@@ -8,19 +8,20 @@
 
 import Foundation
 
-public typealias ParserRule = (parser: Parser, reader: Reader) -> Bool
+public typealias ParserRule = (_ parser: Parser, _ reader: Reader) -> Bool
 public typealias ParserAction = () -> ()
 
 // EOF operator
-postfix operator *!* {}
+postfix operator *!*
+
 public postfix func *!* (rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
-        return rule(parser: parser, reader: reader) && reader.eof()
+        return rule(parser, reader) && reader.eof()
     }
 }
 
 // call a named rule - this allows for cycles, so be careful!
-prefix operator ^ {}
+prefix operator ^
 public prefix func ^(name:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("named rule: \(name)")
@@ -31,7 +32,7 @@ public prefix func ^(name:String) -> ParserRule {
             let rule = parser.named_rules[name]
         
             parser.current_named_rule = name
-            let result = rule!(parser: parser, reader: reader)
+            let result = rule!(parser, reader)
             parser.current_named_rule = old_named_rule
             
             parser.leave("named rule: \(name)",result)
@@ -44,7 +45,7 @@ public prefix func ^(name:String) -> ParserRule {
 }
 
 // match a regex
-prefix operator %! {}
+prefix operator %!
 public prefix func %!(pattern:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("regex '\(pattern)'")
@@ -78,7 +79,7 @@ public prefix func %!(pattern:String) -> ParserRule {
 }
 
 // match a literal string
-prefix operator % {}
+prefix operator %
 public prefix func %(lit:String) -> ParserRule {
     return literal(lit)
 }
@@ -128,7 +129,7 @@ public func - (left: Character, right: Character) -> ParserRule {
 // invert match
 public prefix func !(rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
-        return !rule(parser: parser, reader: reader)
+        return !rule(parser, reader)
     }
 }
 
@@ -137,7 +138,7 @@ public prefix func !(lit: String) -> ParserRule {
 }
 
 // match one or more
-postfix operator + {}
+postfix operator +
 public postfix func + (rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         let pos = reader.position
@@ -147,7 +148,7 @@ public postfix func + (rule: ParserRule) -> ParserRule {
         parser.enter("one or more")
         
         repeat {
-            flag = rule(parser: parser, reader: reader)
+            flag = rule(parser, reader)
             found = found || flag
         } while(flag)
         
@@ -166,7 +167,7 @@ public postfix func + (lit: String) -> ParserRule {
 
 
 // match zero or more
-postfix operator * {}
+postfix operator *
 public postfix func * (rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         var flag: Bool
@@ -175,7 +176,7 @@ public postfix func * (rule: ParserRule) -> ParserRule {
         
         repeat {
             let pos = reader.position
-            flag = rule(parser: parser, reader: reader)
+            flag = rule(parser, reader)
             if(!flag) {
                 reader.seek(pos)
             } else {
@@ -193,13 +194,13 @@ public postfix func * (lit: String) -> ParserRule {
 }
 
 // optional
-postfix operator /~ {}
+postfix operator /~
 public postfix func /~ (rule: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("optionally")
         
         let pos = reader.position
-        if(!rule(parser: parser, reader: reader)) {
+        if(!rule(parser, reader)) {
             reader.seek(pos)
         }
 
@@ -229,10 +230,10 @@ public func | (left: ParserRule, right: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("|")
         let pos = reader.position
-        var result = left(parser: parser, reader: reader)
+        var result = left(parser, reader)
         if(!result) {
 			reader.seek(pos)
-            result = right(parser: parser, reader: reader)
+            result = right(parser, reader)
         }
     
         if(!result) {
@@ -244,8 +245,20 @@ public func | (left: ParserRule, right: ParserRule) -> ParserRule {
     }
 }
 
+precedencegroup MinPrecedence {
+	associativity: left
+	lowerThan: AssignmentPrecedence
+}
+
+precedencegroup MaxPrecedence {
+	associativity: right
+	higherThan: MinPrecedence
+}
+
+
 // match all
-infix operator  ~ {associativity left precedence 10}
+infix operator  ~ : MinPrecedence
+
 public func ~ (left: String, right: String) -> ParserRule {
     return literal(left) ~ literal(right)
 }
@@ -261,14 +274,14 @@ public func ~ (left: ParserRule, right: String) -> ParserRule {
 public func ~ (left : ParserRule, right: ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("~")
-        let res = left(parser: parser, reader: reader) && right(parser: parser, reader: reader)
+        let res = left(parser, reader) && right(parser, reader)
         parser.leave("~", res)
         return res
     }
 }
 
 // on match
-infix operator => {associativity right precedence 100}
+infix operator => : MaxPrecedence
 public func => (rule : ParserRule, action: ParserAction) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         let start = reader.position
@@ -276,7 +289,7 @@ public func => (rule : ParserRule, action: ParserAction) -> ParserRule {
         
         parser.enter("=>")
         
-        if(rule(parser: parser, reader: reader)) {
+        if(rule(parser, reader)) {
             let capture = Parser.ParserCapture(start: start, end: reader.position, action: action, reader: reader)
             
             parser.captures.append(capture)
@@ -293,7 +306,8 @@ public func => (rule : ParserRule, action: ParserAction) -> ParserRule {
 }
 
 /** The ~~ operator matches two following elements, optionally with whitespace (Parser.whitespace) in between. */
-infix operator  ~~ {associativity left precedence 10}
+infix operator  ~~ : MinPrecedence
+
 public func ~~ (left: String, right: String) -> ParserRule {
 	return literal(left) ~~ literal(right)
 }
@@ -308,7 +322,7 @@ public func ~~ (left: ParserRule, right: String) -> ParserRule {
 
 public func ~~ (left : ParserRule, right: ParserRule) -> ParserRule {
 	return {(parser: Parser, reader: Reader) -> Bool in
-		return left(parser: parser, reader: reader) && parser.whitespace(parser: parser, reader: reader) && right(parser: parser, reader: reader)
+		return left(parser, reader) && parser.whitespace(parser, reader) && right(parser, reader)
 	}
 }
 
@@ -318,12 +332,14 @@ public postfix func ++ (left: ParserRule) -> ParserRule {
 }
 
 public typealias ParserRuleDefinition = () -> ParserRule
-infix operator <- {}
+
+infix operator <-
+
 public func <- (left: Parser, right: ParserRuleDefinition) -> () {
     left.rule_definitions.append(right)
 }
 
-public class Parser {
+open class Parser {
     public struct ParserCapture : CustomStringConvertible {
         public var start: Int
         public var end: Int
@@ -370,7 +386,7 @@ public class Parser {
         rules()
     }
     
-    public init(rule_def: () -> ParserRule) {
+    public init(rule_def: @escaping () -> ParserRule) {
         rule_definition = rule_def
     }
     
@@ -378,7 +394,7 @@ public class Parser {
         named_rules[name] = rule
     }
     
-    public func rules() {
+    open func rules() {
         
     }
     
@@ -393,7 +409,7 @@ public class Parser {
         
         let reader = StringReader(string: string)
         
-        if(start_rule!(parser: self, reader: reader)) {
+        if(start_rule!(self, reader)) {
             current_reader = reader
             
             for capture in captures {
