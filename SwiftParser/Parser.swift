@@ -14,7 +14,7 @@ public typealias ParserAction = () -> ()
 // EOF operator
 postfix operator *!*
 
-public postfix func *!* (rule: ParserRule) -> ParserRule {
+public postfix func *!* (rule: @escaping ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         return rule(parser, reader) && reader.eof()
     }
@@ -127,7 +127,7 @@ public func - (left: Character, right: Character) -> ParserRule {
 }
 
 // invert match
-public prefix func !(rule: ParserRule) -> ParserRule {
+public prefix func !(rule: @escaping ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         return !rule(parser, reader)
     }
@@ -139,7 +139,7 @@ public prefix func !(lit: String) -> ParserRule {
 
 // match one or more
 postfix operator +
-public postfix func + (rule: ParserRule) -> ParserRule {
+public postfix func + (rule: @escaping ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         let pos = reader.position
         var found = false
@@ -168,7 +168,7 @@ public postfix func + (lit: String) -> ParserRule {
 
 // match zero or more
 postfix operator *
-public postfix func * (rule: ParserRule) -> ParserRule {
+public postfix func * (rule: @escaping ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         var flag: Bool
         var matched = false
@@ -195,7 +195,7 @@ public postfix func * (lit: String) -> ParserRule {
 
 // optional
 postfix operator /~
-public postfix func /~ (rule: ParserRule) -> ParserRule {
+public postfix func /~ (rule: @escaping ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("optionally")
         
@@ -218,15 +218,15 @@ public func | (left: String, right: String) -> ParserRule {
     return literal(left) | literal(right)
 }
 
-public func | (left: String, right: ParserRule) -> ParserRule {
+public func | (left: String, right: @escaping ParserRule) -> ParserRule {
     return literal(left) | right
 }
 
-public func | (left: ParserRule, right: String) -> ParserRule {
+public func | (left: @escaping ParserRule, right: String) -> ParserRule {
     return left | literal(right)
 }
 
-public func | (left: ParserRule, right: ParserRule) -> ParserRule {
+public func | (left: @escaping ParserRule, right: @escaping ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("|")
         let pos = reader.position
@@ -263,15 +263,15 @@ public func ~ (left: String, right: String) -> ParserRule {
     return literal(left) ~ literal(right)
 }
 
-public func ~ (left: String, right: ParserRule) -> ParserRule {
+public func ~ (left: String, right: @escaping ParserRule) -> ParserRule {
     return literal(left) ~ right
 }
 
-public func ~ (left: ParserRule, right: String) -> ParserRule {
+public func ~ (left: @escaping ParserRule, right: String) -> ParserRule {
     return left ~ literal(right)
 }
 
-public func ~ (left : ParserRule, right: ParserRule) -> ParserRule {
+public func ~ (left : @escaping ParserRule, right: @escaping ParserRule) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         parser.enter("~")
         let res = left(parser, reader) && right(parser, reader)
@@ -282,7 +282,7 @@ public func ~ (left : ParserRule, right: ParserRule) -> ParserRule {
 
 // on match
 infix operator => : MaxPrecedence
-public func => (rule : ParserRule, action: ParserAction) -> ParserRule {
+public func => (rule : @escaping ParserRule, action: @escaping ParserAction) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
         let start = reader.position
         let capture_count = parser.captures.count
@@ -312,22 +312,22 @@ public func ~~ (left: String, right: String) -> ParserRule {
 	return literal(left) ~~ literal(right)
 }
 
-public func ~~ (left: String, right: ParserRule) -> ParserRule {
+public func ~~ (left: String, right: @escaping ParserRule) -> ParserRule {
 	return literal(left) ~~ right
 }
 
-public func ~~ (left: ParserRule, right: String) -> ParserRule {
+public func ~~ (left: @escaping ParserRule, right: String) -> ParserRule {
 	return left ~~ literal(right)
 }
 
-public func ~~ (left : ParserRule, right: ParserRule) -> ParserRule {
+public func ~~ (left : @escaping ParserRule, right: @escaping ParserRule) -> ParserRule {
 	return {(parser: Parser, reader: Reader) -> Bool in
 		return left(parser, reader) && parser.whitespace(parser, reader) && right(parser, reader)
 	}
 }
 
 /** Parser rule that matches the given parser rule at least once, but possibly more */
-public postfix func ++ (left: ParserRule) -> ParserRule {
+public postfix func ++ (left: @escaping ParserRule) -> ParserRule {
 	return left ~~ left*
 }
 
@@ -335,7 +335,7 @@ public typealias ParserRuleDefinition = () -> ParserRule
 
 infix operator <-
 
-public func <- (left: Parser, right: ParserRuleDefinition) -> () {
+public func <- (left: Parser, right: @escaping ParserRuleDefinition) -> () {
     left.rule_definitions.append(right)
 }
 
@@ -390,7 +390,7 @@ open class Parser {
         rule_definition = rule_def
     }
     
-    public func add_named_rule(_ name:String, rule: ParserRule) {
+    public func add_named_rule(_ name:String, rule: @escaping ParserRule) {
         named_rules[name] = rule
     }
     
