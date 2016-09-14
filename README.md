@@ -92,4 +92,22 @@ The following code snippet is taken from one of the unit tests.  It show how to 
           add_named_rule("tertiary",  rule: ("(" ~ ^"primary" ~ ")") | number)
       }
 
+### Installation
 
+#### Swift Package Manager (SPM)
+ 
+ You can install the driver using Swift Package Manager by adding the following line to your ```Package.swift``` as a dependency:
+ 
+ ```
+ .Package(url: "https://github.com/dparnell/swift-parser-generator.git", majorVersion: 1)
+ ```
+ 
+ To use the driver in an Xcode project, generate an Xcode project file using SPM:
+ ```
+ swift package generate-xcodeproj
+ ```
+ 
+ #### Manual
+ 
+ Drag SwiftParser.xcodeproj into your own project, then add SwiftParser as dependency (build targets) and link to it.
+ You should then be able to simply 'import SwiftParser' from Swift code.
