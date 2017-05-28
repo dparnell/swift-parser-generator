@@ -45,6 +45,7 @@ public prefix func ^(name:String) -> ParserRule {
 }
 
 // match a regex
+#if !os(Linux)
 prefix operator %!
 public prefix func %!(pattern:String) -> ParserRule {
     return {(parser: Parser, reader: Reader) -> Bool in
@@ -66,7 +67,7 @@ public prefix func %!(pattern:String) -> ParserRule {
                 parser.leave("regex", true)
                 return true
             }
-        } catch _ as NSError {
+        } catch {
             found = false
         }
         
@@ -77,6 +78,7 @@ public prefix func %!(pattern:String) -> ParserRule {
         return false
     }
 }
+#endif
 
 // match a literal string
 prefix operator %
