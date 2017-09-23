@@ -3,6 +3,11 @@ import PackageDescription
 
 let package = Package(
 	name: "SwiftParser",
+	products: [
+		.library(name: "SwiftParser", targets: ["SwiftParser"]),
+	],
+	dependencies: [
+	],
 	targets: [
 		.target(name: "SwiftParser", path: "Sources")
 	]
