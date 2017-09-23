@@ -1,8 +1,9 @@
+// swift-tools-version:4.0
 import PackageDescription
 
 let package = Package(
 	name: "SwiftParser",
 	targets: [
-		Target(name: "SwiftParser")
+		.target(name: "SwiftParser", path: "Sources")
 	]
 )
