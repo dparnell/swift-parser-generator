@@ -43,11 +43,10 @@ public class StringReader : Reader {
     }
     
     public func remainder() -> String {
-      return string.substring(from: index)
+		return String(string[index...])
     }
   
     public func substring(_ starting_at:Int, ending_at:Int) -> String {
-        return string.substring(with: string.index(string.startIndex, offsetBy: starting_at)..<string.index(string.startIndex, offsetBy: ending_at))
+        return String(string[string.index(string.startIndex, offsetBy: starting_at)..<string.index(string.startIndex, offsetBy: ending_at)])
     }
-    
 }
