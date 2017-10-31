@@ -1,46 +1,193 @@
-//
-//  Parser.swift
-//  SwiftParser
-//
-//  Created by Daniel Parnell on 17/06/2014.
-//  Copyright (c) 2014 Daniel Parnell. All rights reserved.
-//
-
 import Foundation
 
-public typealias ParserRule = (_ parser: Parser, _ reader: Reader) -> Bool
-public typealias ParserAction = () -> ()
+public typealias ParserFunction = (_ parser: Parser, _ reader: Reader) -> Bool
+public typealias ParserAction = (_ parser: Parser) -> ()
+public typealias ParserActionWithoutParameter = () -> ()
+
+/** Definition of a grammar for the parser. Can be reused between multiple parsings. */
+public class Grammar {
+	/** This rule determines what is seen as 'whitespace' by the '~~'  operator, which allows
+	whitespace between two following items.*/
+	public var whitespace: ParserRule = (" " | "\t" | "\r\n" | "\r" | "\n")*
+
+	/** The start rule for this grammar. */
+	public var startRule: ParserRule! = nil
+	internal var namedRules: [String: ParserRule] = [:]
+
+	public init() {
+	}
+
+	public init(_ creator: (Grammar) -> (ParserRule)) {
+		self.startRule = creator(self)
+	}
+
+	public subscript(name: String) -> ParserRule {
+		get {
+			return self.namedRules[name]!
+		}
+		set(newValue) {
+			self.namedRules[name] = newValue
+		}
+	}
+}
+
+open class Parser {
+	public struct ParserCapture : CustomStringConvertible {
+		public var start: Int
+		public var end: Int
+		public var action: ParserAction
+		let reader: Reader
+
+		var text: String {
+			return reader.substring(start, ending_at:end)
+		}
+
+		public var description: String {
+			return "[\(start),\(end):\(text)]"
+		}
+	}
+
+	public var debugRules = false
+	public var captures: [ParserCapture] = []
+	public var currentCapture: ParserCapture?
+	public var lastCapture: ParserCapture?
+	public var currentReader: Reader?
+	public var grammar: Grammar
+	internal var matches: [ParserRule: [Int: Bool]] = [:]
+
+	public var text: String {
+		get {
+			if let capture = currentCapture {
+				return capture.text
+			}
+
+			return ""
+		}
+	}
+
+	public init() {
+		self.grammar = Grammar()
+	}
+
+	public init(grammar: Grammar) {
+		self.grammar = grammar
+	}
+
+	public func parse(_ string: String) -> Bool {
+		matches.removeAll(keepingCapacity: false)
+		captures.removeAll(keepingCapacity: true)
+		currentCapture = nil
+		lastCapture = nil
+
+		let reader = StringReader(string: string)
+
+		if(grammar.startRule!.matches(self, reader)) {
+			currentReader = reader
+
+			for capture in captures {
+				lastCapture = currentCapture
+				currentCapture = capture
+				capture.action(self)
+			}
+
+			currentReader = nil
+			currentCapture = nil
+			lastCapture = nil
+			matches.removeAll(keepingCapacity: false)
+			return true
+		}
+
+		return false
+	}
+
+	var depth = 0
+
+	func leave(_ name: String) {
+		if(debugRules) {
+			self.out("-- \(name)")
+		}
+		depth -= 1
+	}
+
+	func leave(_ name: String, _ res: Bool) {
+		if(debugRules) {
+			self.out("-- \(name):\t\(res)")
+		}
+		depth -= 1
+	}
+
+	func enter(_ name: String) {
+		depth += 1
+		if(debugRules) {
+			self.out("++ \(name)")
+		}
+	}
+
+	func out(_ name: String) {
+		var spaces = ""
+		for _ in 0..<depth-1 {
+			spaces += "  "
+		}
+		print("\(spaces)\(name)")
+	}
+}
+
+public class ParserRule: Hashable {
+	internal var function: ParserFunction
+
+	public init(_ function: @escaping ParserFunction) {
+		self.function = function
+	}
+
+	public func matches(_ parser: Parser, _ reader: Reader) -> Bool {
+		return self.function(parser, reader)
+	}
+
+	public var hashValue: Int {
+		return ObjectIdentifier(self).hashValue
+	}
+
+	public static func ==(lhs: ParserRule, rhs: ParserRule) -> Bool {
+		return ObjectIdentifier(lhs) == ObjectIdentifier(rhs)
+	}
+}
+
+public final class ParserMemoizingRule: ParserRule {
+	public override func matches(_ parser: Parser, _ reader: Reader) -> Bool {
+		let position = reader.position
+		if let m = parser.matches[self]?[position] {
+			return m
+		}
+		let r = self.function(parser, reader)
+
+		if parser.matches[self] == nil {
+			parser.matches[self] = [position: r]
+		}
+		else {
+			parser.matches[self]![position] = r
+		}
+		return r
+	}
+}
 
 // EOF operator
 postfix operator *!*
 
-public postfix func *!* (rule: @escaping ParserRule) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
-        return rule(parser, reader) && reader.eof()
+public postfix func *!* (rule: ParserRule) -> ParserRule {
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
+        return rule.matches(parser, reader) && reader.eof()
     }
 }
 
 // call a named rule - this allows for cycles, so be careful!
 prefix operator ^
 public prefix func ^(name:String) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+    return ParserMemoizingRule { (parser: Parser, reader: Reader) -> Bool in
+		// TODO: check stack to see if this named rule is already on there to prevent loops
         parser.enter("named rule: \(name)")
-        
-        // check to see if this would cause a recursive loop?
-        if(parser.current_named_rule != name) {
-            let old_named_rule = parser.current_named_rule
-            let rule = parser.named_rules[name]
-        
-            parser.current_named_rule = name
-            let result = rule!(parser, reader)
-            parser.current_named_rule = old_named_rule
-            
-            parser.leave("named rule: \(name)",result)
-            return result
-        }
-        
-        parser.leave("named rule: - blocked", false)
-        return false
+		let result = parser.grammar[name].function(parser, reader)
+		parser.leave("named rule: \(name)",result)
+		return result
     }
 }
 
@@ -48,7 +195,7 @@ public prefix func ^(name:String) -> ParserRule {
 #if !os(Linux)
 prefix operator %!
 public prefix func %!(pattern:String) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         parser.enter("regex '\(pattern)'")
         
         let pos = reader.position
@@ -87,7 +234,7 @@ public prefix func %(lit:String) -> ParserRule {
 }
 
 public func literal(_ string:String) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         parser.enter("literal '\(string)'")
         
         let pos = reader.position
@@ -109,7 +256,7 @@ public func literal(_ string:String) -> ParserRule {
 
 // match a range of characters eg: "0"-"9"
 public func - (left: Character, right: Character) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         parser.enter("range [\(left)-\(right)]")
         
         let pos = reader.position
@@ -129,9 +276,9 @@ public func - (left: Character, right: Character) -> ParserRule {
 }
 
 // invert match
-public prefix func !(rule: @escaping ParserRule) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
-        return !rule(parser, reader)
+public prefix func !(rule: ParserRule) -> ParserRule {
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
+        return !rule.matches(parser, reader)
     }
 }
 
@@ -141,8 +288,8 @@ public prefix func !(lit: String) -> ParserRule {
 
 // match one or more
 postfix operator +
-public postfix func + (rule: @escaping ParserRule) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+public postfix func + (rule: ParserRule) -> ParserRule {
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         let pos = reader.position
         var found = false
         var flag: Bool
@@ -150,7 +297,7 @@ public postfix func + (rule: @escaping ParserRule) -> ParserRule {
         parser.enter("one or more")
         
         repeat {
-            flag = rule(parser, reader)
+            flag = rule.matches(parser, reader)
             found = found || flag
         } while(flag)
         
@@ -170,15 +317,15 @@ public postfix func + (lit: String) -> ParserRule {
 
 // match zero or more
 postfix operator *
-public postfix func * (rule: @escaping ParserRule) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+public postfix func * (rule: ParserRule) -> ParserRule {
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         var flag: Bool
         var matched = false
         parser.enter("zero or more")
         
         repeat {
             let pos = reader.position
-            flag = rule(parser, reader)
+            flag = rule.matches(parser, reader)
             if(!flag) {
                 reader.seek(pos)
             } else {
@@ -197,12 +344,12 @@ public postfix func * (lit: String) -> ParserRule {
 
 // optional
 postfix operator /~
-public postfix func /~ (rule: @escaping ParserRule) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+public postfix func /~ (rule: ParserRule) -> ParserRule {
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         parser.enter("optionally")
         
         let pos = reader.position
-        if(!rule(parser, reader)) {
+        if(!rule.matches(parser, reader)) {
             reader.seek(pos)
         }
 
@@ -220,22 +367,22 @@ public func | (left: String, right: String) -> ParserRule {
     return literal(left) | literal(right)
 }
 
-public func | (left: String, right: @escaping ParserRule) -> ParserRule {
+public func | (left: String, right: ParserRule) -> ParserRule {
     return literal(left) | right
 }
 
-public func | (left: @escaping ParserRule, right: String) -> ParserRule {
+public func | (left: ParserRule, right: String) -> ParserRule {
     return left | literal(right)
 }
 
-public func | (left: @escaping ParserRule, right: @escaping ParserRule) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+public func | (left: ParserRule, right: ParserRule) -> ParserRule {
+    return ParserMemoizingRule { (parser: Parser, reader: Reader) -> Bool in
         parser.enter("|")
         let pos = reader.position
-        var result = left(parser, reader)
+        var result = left.matches(parser, reader)
         if(!result) {
 			reader.seek(pos)
-            result = right(parser, reader)
+            result = right.matches(parser, reader)
         }
     
         if(!result) {
@@ -249,14 +396,13 @@ public func | (left: @escaping ParserRule, right: @escaping ParserRule) -> Parse
 
 precedencegroup MinPrecedence {
 	associativity: left
-	lowerThan: AssignmentPrecedence
+	higherThan: AssignmentPrecedence
 }
 
 precedencegroup MaxPrecedence {
-	associativity: right
+	associativity: left
 	higherThan: MinPrecedence
 }
-
 
 // match all
 infix operator  ~ : MinPrecedence
@@ -265,18 +411,18 @@ public func ~ (left: String, right: String) -> ParserRule {
     return literal(left) ~ literal(right)
 }
 
-public func ~ (left: String, right: @escaping ParserRule) -> ParserRule {
+public func ~ (left: String, right: ParserRule) -> ParserRule {
     return literal(left) ~ right
 }
 
-public func ~ (left: @escaping ParserRule, right: String) -> ParserRule {
+public func ~ (left: ParserRule, right: String) -> ParserRule {
     return left ~ literal(right)
 }
 
-public func ~ (left : @escaping ParserRule, right: @escaping ParserRule) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+public func ~ (left : ParserRule, right: ParserRule) -> ParserRule {
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         parser.enter("~")
-        let res = left(parser, reader) && right(parser, reader)
+        let res = left.matches(parser, reader) && right.matches(parser, reader)
         parser.leave("~", res)
         return res
     }
@@ -284,14 +430,15 @@ public func ~ (left : @escaping ParserRule, right: @escaping ParserRule) -> Pars
 
 // on match
 infix operator => : MaxPrecedence
-public func => (rule : @escaping ParserRule, action: @escaping ParserAction) -> ParserRule {
-    return {(parser: Parser, reader: Reader) -> Bool in
+
+public func => (rule : ParserRule, action: @escaping ParserAction) -> ParserRule {
+    return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         let start = reader.position
         let capture_count = parser.captures.count
         
         parser.enter("=>")
         
-        if(rule(parser, reader)) {
+        if(rule.matches(parser, reader)) {
             let capture = Parser.ParserCapture(start: start, end: reader.position, action: action, reader: reader)
             
             parser.captures.append(capture)
@@ -307,6 +454,12 @@ public func => (rule : @escaping ParserRule, action: @escaping ParserAction) -> 
     }
 }
 
+public func => (rule : ParserRule, action: @escaping ParserActionWithoutParameter) -> ParserRule {
+	return rule => { _ in
+		action()
+	}
+}
+
 /** The ~~ operator matches two following elements, optionally with whitespace (Parser.whitespace) in between. */
 infix operator  ~~ : MinPrecedence
 
@@ -314,147 +467,22 @@ public func ~~ (left: String, right: String) -> ParserRule {
 	return literal(left) ~~ literal(right)
 }
 
-public func ~~ (left: String, right: @escaping ParserRule) -> ParserRule {
+public func ~~ (left: String, right: ParserRule) -> ParserRule {
 	return literal(left) ~~ right
 }
 
-public func ~~ (left: @escaping ParserRule, right: String) -> ParserRule {
+public func ~~ (left: ParserRule, right: String) -> ParserRule {
 	return left ~~ literal(right)
 }
 
-public func ~~ (left : @escaping ParserRule, right: @escaping ParserRule) -> ParserRule {
-	return {(parser: Parser, reader: Reader) -> Bool in
-		return left(parser, reader) && parser.whitespace(parser, reader) && right(parser, reader)
+public func ~~ (left : ParserRule, right: ParserRule) -> ParserRule {
+	return ParserRule { (parser: Parser, reader: Reader) -> Bool in
+		return left.matches(parser, reader) && parser.grammar.whitespace.matches(parser, reader) && right.matches(parser, reader)
 	}
 }
 
 /** Parser rule that matches the given parser rule at least once, but possibly more */
-public postfix func ++ (left: @escaping ParserRule) -> ParserRule {
+public postfix func ++ (left: ParserRule) -> ParserRule {
 	return left ~~ left*
-}
-
-public typealias ParserRuleDefinition = () -> ParserRule
-
-infix operator <-
-
-public func <- (left: Parser, right: @escaping ParserRuleDefinition) -> () {
-    left.rule_definitions.append(right)
-}
-
-open class Parser {
-    public struct ParserCapture : CustomStringConvertible {
-        public var start: Int
-        public var end: Int
-        public var action: ParserAction
-        let reader:Reader
-
-		var text: String {
-            return reader.substring(start, ending_at:end)
-        }
-
-        public var description: String {
-            return "[\(start),\(end):\(text)]"
-        }
-    }
-    
-    public var rule_definition: ParserRuleDefinition?
-    public var rule_definitions: [ParserRuleDefinition] = []
-    public var start_rule: ParserRule?
-    public var debug_rules = false
-
-    public var captures: [ParserCapture] = []
-    public var current_capture:ParserCapture?
-    public var last_capture:ParserCapture?
-    public var current_reader:Reader?
-
-	var named_rules: Dictionary<String,ParserRule> = Dictionary<String,ParserRule>()
-    var current_named_rule = ""
-
-	/** This rule determines what is seen as 'whitespace' by the '~~'  operator, which allows whitespace between two
-	 following items.*/
-	public var whitespace: ParserRule = (" " | "\t" | "\r\n" | "\r" | "\n")*
-
-    public var text:String {
-        get {
-            if let capture = current_capture {
-                return capture.text
-            }
-            
-            return ""
-        }
-    }
-    
-    public init() {
-        rules()
-    }
-    
-    public init(rule_def: @escaping () -> ParserRule) {
-        rule_definition = rule_def
-    }
-    
-    public func add_named_rule(_ name:String, rule: @escaping ParserRule) {
-        named_rules[name] = rule
-    }
-    
-    open func rules() {
-        
-    }
-    
-    public func parse(_ string: String) -> Bool {
-        if(start_rule == nil) {
-            start_rule = rule_definition!()
-        }
-        
-        captures.removeAll(keepingCapacity: true)
-        current_capture = nil
-        last_capture = nil
-        
-        let reader = StringReader(string: string)
-        
-        if(start_rule!(self, reader)) {
-            current_reader = reader
-            
-            for capture in captures {
-                last_capture = current_capture
-                current_capture = capture
-                capture.action()
-            }
-
-            current_reader = nil
-            current_capture = nil
-            last_capture = nil
-            return true
-        }
-        
-        return false
-    }
-    
-    var depth = 0
-    func leave(_ name:String) {
-        if(debug_rules) {
-            self.out("-- \(name)")
-        }
-        depth -= 1
-    }
-    func leave(_ name:String, _ res:Bool) {
-        if(debug_rules) {
-            self.out("-- \(name):\t\(res)")
-        }
-        depth -= 1
-    }
-    func enter(_ name:String) {
-        depth += 1
-        if(debug_rules) {
-            self.out("++ \(name)")
-        }
-    }
-    func out(_ name:String) {
-        var spaces = ""
-        for _ in 0..<depth-1 {
-            spaces += "  "
-        }
-        print("\(spaces)\(name)")
-    }
-    
 }
 

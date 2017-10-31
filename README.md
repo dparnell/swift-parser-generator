@@ -3,17 +3,17 @@
 swift-parser-generator
 ======================
 
-This code contains an attempt to make something like the Scala parser combinators in Swift.
-
-It has been partially successful in that it can be used to make simple parsers, but I have not as yet implemented the Packrat style parsers.
+This code contains an attempt to make something like the Scala parser combinators in Swift. It has been
+partially successful in that it can be used to make simple parsers. Intermediate parsing results are cached
+for complex rules, so that parsing of complex expressions should still be linear-time (cf. Packrat).
 
 How it works
 ============
 
-Using operator overloading a nested set of functions is created that forms the parser.
-The functions take a parser instance and a reader object that provides the function with characters to parse.
+Using operator overloading a nested set of functions is created that forms the parser. The functions take
+a parser instance and a reader object that provides the function with characters to parse.
 
-The following parsing operations are currently supported
+The following parsing operations are currently supported:
 
     // "a" followed by "b"
     let rule = "a" ~ "b"
@@ -61,8 +61,8 @@ To have the parser call your code when a rule matches use the => operator.  For 
     class Adder : Parser {
         var stack: Int[] = []
         
-        func push() {
-            stack.append(self.text.toInt()!)
+        func push(_ text: String) {
+            stack.append(text.toInt()!)
         }
         
         func add() {
@@ -71,26 +71,30 @@ To have the parser call your code when a rule matches use the => operator.  For 
             
             stack.append(left + right)
         }
-        
-        override func rules() {
-            let number = ("0"-"9")+ => push
-            let expr = (number ~ "+" ~ number) => add
-            
-            start_rule = expr
-        }
+
+		override init() {
+			super.init()
+
+			self.grammar = Grammar { [unowned self] g in
+				g["number"] = ("0"-"9")+ => { [unowned self] parser in self.push(parser.text) }
+				return (^"number" ~ "+" ~ ^"number") => add
+			}
+		}
     }
 
-This example displays several details about how to work with the parser.  The parser is defined in a method called `rules` and it must set the `start_rule` to tell the parser where to begin.
+This example displays several details about how to work with the parser.  The parser is defined in an object called `grammar` which defines named rules as well as a start rule, to tell the parser where to begin.
+
 The following code snippet is taken from one of the unit tests.  It show how to implement a parser containing  mutually recursive rules:
 
-      override func rules() {
-          start_rule = (^"primary")*!*
-            
-          let number = ("0"-"9")+ => push
-          add_named_rule("primary",   rule: ^"secondary" ~ (("+" ~ ^"secondary" => add) | ("-" ~ ^"secondary" => sub))*)
-          add_named_rule("secondary", rule: ^"tertiary" ~ (("*" ~ ^"tertiary" => mul) | ("/" ~ ^"tertiary" => div))*)
-          add_named_rule("tertiary",  rule: ("(" ~ ^"primary" ~ ")") | number)
-      }
+	self.grammar = Grammar { [unowned self] g in
+		g["number"] = ("0"-"9")+ => { [unowned self] parser in self.push(parser.text) }
+
+		g["primary"] = ^"secondary" ~ (("+" ~ ^"secondary" => add) | ("-" ~ ^"secondary" => sub))*
+		g["secondary"] = ^"tertiary" ~ (("*" ~ ^"tertiary" => mul) | ("/" ~ ^"tertiary" => div))*
+		g["tertiary"] = ("(" ~ ^"primary" ~ ")") | ^"number"
+
+		return (^"primary")*!*
+	}
 
 ### Installation
 
