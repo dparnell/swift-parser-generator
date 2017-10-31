@@ -50,8 +50,8 @@ open class Parser {
 	public var debugRules = false
 	public var captures: [ParserCapture] = []
 	public var currentCapture: ParserCapture?
-	public var last_capture: ParserCapture?
-	public var current_reader: Reader?
+	public var lastCapture: ParserCapture?
+	public var currentReader: Reader?
 	public var grammar: Grammar
 	internal var matches: [ParserRule: [Int: Bool]] = [:]
 
@@ -77,22 +77,22 @@ open class Parser {
 		matches.removeAll(keepingCapacity: false)
 		captures.removeAll(keepingCapacity: true)
 		currentCapture = nil
-		last_capture = nil
+		lastCapture = nil
 
 		let reader = StringReader(string: string)
 
 		if(grammar.startRule!.matches(self, reader)) {
-			current_reader = reader
+			currentReader = reader
 
 			for capture in captures {
-				last_capture = currentCapture
+				lastCapture = currentCapture
 				currentCapture = capture
 				capture.action(self)
 			}
 
-			current_reader = nil
+			currentReader = nil
 			currentCapture = nil
-			last_capture = nil
+			lastCapture = nil
 			matches.removeAll(keepingCapacity: false)
 			return true
 		}
