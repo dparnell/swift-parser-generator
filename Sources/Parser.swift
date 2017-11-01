@@ -1,8 +1,8 @@
 import Foundation
 
 public typealias ParserFunction = (_ parser: Parser, _ reader: Reader) -> Bool
-public typealias ParserAction = (_ parser: Parser) -> ()
-public typealias ParserActionWithoutParameter = () -> ()
+public typealias ParserAction = (_ parser: Parser) throws -> ()
+public typealias ParserActionWithoutParameter = () throws -> ()
 
 /** Definition of a grammar for the parser. Can be reused between multiple parsings. */
 public class Grammar {
@@ -73,11 +73,19 @@ open class Parser {
 		self.grammar = grammar
 	}
 
-	public func parse(_ string: String) -> Bool {
+	public func parse(_ string: String) throws -> Bool {
 		matches.removeAll(keepingCapacity: false)
-		captures.removeAll(keepingCapacity: true)
+		captures.removeAll(keepingCapacity: false)
 		currentCapture = nil
 		lastCapture = nil
+
+		defer {
+			currentReader = nil
+			currentCapture = nil
+			lastCapture = nil
+			matches.removeAll(keepingCapacity: false)
+			captures.removeAll(keepingCapacity:false)
+		}
 
 		let reader = StringReader(string: string)
 
@@ -87,13 +95,8 @@ open class Parser {
 			for capture in captures {
 				lastCapture = currentCapture
 				currentCapture = capture
-				capture.action(self)
+				try capture.action(self)
 			}
-
-			currentReader = nil
-			currentCapture = nil
-			lastCapture = nil
-			matches.removeAll(keepingCapacity: false)
 			return true
 		}
 
@@ -456,7 +459,7 @@ public func => (rule : ParserRule, action: @escaping ParserAction) -> ParserRule
 
 public func => (rule : ParserRule, action: @escaping ParserActionWithoutParameter) -> ParserRule {
 	return rule => { _ in
-		action()
+		try action()
 	}
 }
 
