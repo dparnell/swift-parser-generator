@@ -128,19 +128,19 @@ class SwiftParserTests: XCTestCase {
 
 	func testSimple() {
 		let a = Arith()
-		XCTAssert(a.parse("1+2"))
+		XCTAssert(try a.parse("1+2"))
 		XCTAssertEqual(a.calculator.result, 3)
 	}
 
 	func testComplex() {
 		let a = Arith()
-		XCTAssert(a.parse("6*7-3+20/2-12+(30-5)/5"))
+		XCTAssert(try a.parse("6*7-3+20/2-12+(30-5)/5"))
 		XCTAssertEqual(a.calculator.result, 42)
 	}
 
 	func testShouldNotParse() {
 		let a = Arith()
-		XCTAssertFalse(a.parse("1+"))
-		XCTAssertFalse(a.parse("xxx"))
+		XCTAssertFalse(try a.parse("1+"))
+		XCTAssertFalse(try a.parse("xxx"))
 	}
 }

@@ -1,14 +1,16 @@
 import Foundation
 
-public typealias ParserFunction = (_ parser: Parser, _ reader: Reader) -> Bool
-public typealias ParserAction = (_ parser: Parser) -> ()
-public typealias ParserActionWithoutParameter = () -> ()
+public typealias ParserFunction = (_ parser: Parser, _ reader: Reader) throws -> Bool
+public typealias ParserAction = (_ parser: Parser) throws -> ()
+public typealias ParserActionWithoutParameter = () throws -> ()
 
 /** Definition of a grammar for the parser. Can be reused between multiple parsings. */
 public class Grammar {
 	/** This rule determines what is seen as 'whitespace' by the '~~'  operator, which allows
 	whitespace between two following items.*/
 	public var whitespace: ParserRule = (" " | "\t" | "\r\n" | "\r" | "\n")*
+
+	public var nestingDepthLimit: Int? = nil
 
 	/** The start rule for this grammar. */
 	public var startRule: ParserRule! = nil
@@ -54,6 +56,7 @@ open class Parser {
 	public var currentReader: Reader?
 	public var grammar: Grammar
 	internal var matches: [ParserRule: [Int: Bool]] = [:]
+	internal var nestingDepth = 0
 
 	public var text: String {
 		get {
@@ -73,27 +76,30 @@ open class Parser {
 		self.grammar = grammar
 	}
 
-	public func parse(_ string: String) -> Bool {
+	public func parse(_ string: String) throws -> Bool {
 		matches.removeAll(keepingCapacity: false)
-		captures.removeAll(keepingCapacity: true)
+		captures.removeAll(keepingCapacity: false)
 		currentCapture = nil
 		lastCapture = nil
 
+		defer {
+			currentReader = nil
+			currentCapture = nil
+			lastCapture = nil
+			matches.removeAll(keepingCapacity: false)
+			captures.removeAll(keepingCapacity:false)
+		}
+
 		let reader = StringReader(string: string)
 
-		if(grammar.startRule!.matches(self, reader)) {
+		if try grammar.startRule!.matches(self, reader) {
 			currentReader = reader
 
 			for capture in captures {
 				lastCapture = currentCapture
 				currentCapture = capture
-				capture.action(self)
+				try capture.action(self)
 			}
-
-			currentReader = nil
-			currentCapture = nil
-			lastCapture = nil
-			matches.removeAll(keepingCapacity: false)
 			return true
 		}
 
@@ -139,8 +145,8 @@ public class ParserRule: Hashable {
 		self.function = function
 	}
 
-	public func matches(_ parser: Parser, _ reader: Reader) -> Bool {
-		return self.function(parser, reader)
+	public func matches(_ parser: Parser, _ reader: Reader) throws -> Bool {
+		return try self.function(parser, reader)
 	}
 
 	public var hashValue: Int {
@@ -153,12 +159,12 @@ public class ParserRule: Hashable {
 }
 
 public final class ParserMemoizingRule: ParserRule {
-	public override func matches(_ parser: Parser, _ reader: Reader) -> Bool {
+	public override func matches(_ parser: Parser, _ reader: Reader) throws -> Bool {
 		let position = reader.position
 		if let m = parser.matches[self]?[position] {
 			return m
 		}
-		let r = self.function(parser, reader)
+		let r = try self.function(parser, reader)
 
 		if parser.matches[self] == nil {
 			parser.matches[self] = [position: r]
@@ -175,7 +181,7 @@ postfix operator *!*
 
 public postfix func *!* (rule: ParserRule) -> ParserRule {
     return ParserRule { (parser: Parser, reader: Reader) -> Bool in
-        return rule.matches(parser, reader) && reader.eof()
+        return try rule.matches(parser, reader) && reader.eof()
     }
 }
 
@@ -185,7 +191,7 @@ public prefix func ^(name:String) -> ParserRule {
     return ParserMemoizingRule { (parser: Parser, reader: Reader) -> Bool in
 		// TODO: check stack to see if this named rule is already on there to prevent loops
         parser.enter("named rule: \(name)")
-		let result = parser.grammar[name].function(parser, reader)
+		let result = try parser.grammar[name].function(parser, reader)
 		parser.leave("named rule: \(name)",result)
 		return result
     }
@@ -226,6 +232,30 @@ public prefix func %!(pattern:String) -> ParserRule {
     }
 }
 #endif
+
+public enum ParserError: LocalizedError {
+	case nestingDepthLimitExceeded
+
+	public var errorDescription: String? {
+		switch self {
+		case .nestingDepthLimitExceeded: return "nesting depth limit exceeded"
+		}
+	}
+}
+
+/** Wrap the rule with a nesting depth check. All rules wrapped with this check also increase the
+current nesting depth. */
+public func nest(_ rule: ParserRule) -> ParserRule {
+	return ParserRule { (parser: Parser, reader: Reader) throws -> Bool in
+		parser.nestingDepth += 1
+		defer { parser.nestingDepth -= 1 }
+		if let nd = parser.grammar.nestingDepthLimit, parser.nestingDepth > nd {
+			throw ParserError.nestingDepthLimitExceeded
+		}
+
+		return try rule.matches(parser, reader)
+	}
+}
 
 // match a literal string
 prefix operator %
@@ -278,7 +308,7 @@ public func - (left: Character, right: Character) -> ParserRule {
 // invert match
 public prefix func !(rule: ParserRule) -> ParserRule {
     return ParserRule { (parser: Parser, reader: Reader) -> Bool in
-        return !rule.matches(parser, reader)
+        return try !rule.matches(parser, reader)
     }
 }
 
@@ -297,7 +327,7 @@ public postfix func + (rule: ParserRule) -> ParserRule {
         parser.enter("one or more")
         
         repeat {
-            flag = rule.matches(parser, reader)
+            flag = try rule.matches(parser, reader)
             found = found || flag
         } while(flag)
         
@@ -325,7 +355,7 @@ public postfix func * (rule: ParserRule) -> ParserRule {
         
         repeat {
             let pos = reader.position
-            flag = rule.matches(parser, reader)
+            flag = try rule.matches(parser, reader)
             if(!flag) {
                 reader.seek(pos)
             } else {
@@ -349,7 +379,7 @@ public postfix func /~ (rule: ParserRule) -> ParserRule {
         parser.enter("optionally")
         
         let pos = reader.position
-        if(!rule.matches(parser, reader)) {
+        if(try !rule.matches(parser, reader)) {
             reader.seek(pos)
         }
 
@@ -379,10 +409,10 @@ public func | (left: ParserRule, right: ParserRule) -> ParserRule {
     return ParserMemoizingRule { (parser: Parser, reader: Reader) -> Bool in
         parser.enter("|")
         let pos = reader.position
-        var result = left.matches(parser, reader)
+        var result = try left.matches(parser, reader)
         if(!result) {
 			reader.seek(pos)
-            result = right.matches(parser, reader)
+            result = try right.matches(parser, reader)
         }
     
         if(!result) {
@@ -422,7 +452,7 @@ public func ~ (left: ParserRule, right: String) -> ParserRule {
 public func ~ (left : ParserRule, right: ParserRule) -> ParserRule {
     return ParserRule { (parser: Parser, reader: Reader) -> Bool in
         parser.enter("~")
-        let res = left.matches(parser, reader) && right.matches(parser, reader)
+        let res = try left.matches(parser, reader) && right.matches(parser, reader)
         parser.leave("~", res)
         return res
     }
@@ -438,7 +468,7 @@ public func => (rule : ParserRule, action: @escaping ParserAction) -> ParserRule
         
         parser.enter("=>")
         
-        if(rule.matches(parser, reader)) {
+        if(try rule.matches(parser, reader)) {
             let capture = Parser.ParserCapture(start: start, end: reader.position, action: action, reader: reader)
             
             parser.captures.append(capture)
@@ -456,7 +486,7 @@ public func => (rule : ParserRule, action: @escaping ParserAction) -> ParserRule
 
 public func => (rule : ParserRule, action: @escaping ParserActionWithoutParameter) -> ParserRule {
 	return rule => { _ in
-		action()
+		try action()
 	}
 }
 
@@ -477,7 +507,9 @@ public func ~~ (left: ParserRule, right: String) -> ParserRule {
 
 public func ~~ (left : ParserRule, right: ParserRule) -> ParserRule {
 	return ParserRule { (parser: Parser, reader: Reader) -> Bool in
-		return left.matches(parser, reader) && parser.grammar.whitespace.matches(parser, reader) && right.matches(parser, reader)
+		return try left.matches(parser, reader)
+			&& parser.grammar.whitespace.matches(parser, reader)
+			&& right.matches(parser, reader)
 	}
 }
 
