@@ -1,5 +1,3 @@
-[![Codewake](https://www.codewake.com/badges/ask_question.svg)](https://www.codewake.com/p/swift-parser-generator)
-
 swift-parser-generator
 ======================
 
@@ -15,86 +13,91 @@ a parser instance and a reader object that provides the function with characters
 
 The following parsing operations are currently supported:
 
-    // "a" followed by "b"
-    let rule = "a" ~ "b"
+```swift
+// "a" followed by "b"
+let rule = "a" ~ "b"
 
-	// "a" followed by "b", with possible whitespace in between
-	// to change what is considered whitespace, change the parser.whitespace rule
-	let rule = "a" ~~ "b"
+// "a" followed by "b", with possible whitespace in between
+// to change what is considered whitespace, change the parser.whitespace rule
+let rule = "a" ~~ "b"
 
-	// at least one "a", but possibly more
-	let rule = "a"++
+// at least one "a", but possibly more
+let rule = "a"++
 
-    // "a" or "b"
-    let rule = "a" | "b"
+// "a" or "b"
+let rule = "a" | "b"
 
-    // "a" followed by something other than "b"
-    let rule = "a" ~ !"b"
+// "a" followed by something other than "b"
+let rule = "a" ~ !"b"
 
-    // "a" followed by one or more "b"
-    let rule = "a" ~ "b"+
+// "a" followed by one or more "b"
+let rule = "a" ~ "b"+
 
-    // "a" followed by zero or more "b"
-    let rule = "a" ~ "b"*
+// "a" followed by zero or more "b"
+let rule = "a" ~ "b"*
 
-    // "a" followed by a numeric digit
-    let rule = "a" ~ ("0"-"9")
+// "a" followed by a numeric digit
+let rule = "a" ~ ("0"-"9")
 
-    // "a" followed by the rule named "blah"
-    let rule = "a" ~ ^"blah"
+// "a" followed by the rule named "blah"
+let rule = "a" ~ ^"blah"
 
-    // "a" optionally followed by "b"
-    let rule = "a" ~ "b"/~
+// "a" optionally followed by "b"
+let rule = "a" ~ "b"/~
 
-    // "a" followed by the end of input
-    let rule = "a"*!*
+// "a" followed by the end of input
+let rule = "a"*!*
 
-    // a single "," 
-    let rule = %","
-        
-    // regular expression: consecutive word or space characters
-    let rule = %!"[\\w\\s]+"
+// a single "," 
+let rule = %","
 
+// regular expression: consecutive word or space characters
+let rule = %!"[\\w\\s]+"
+```
 To have the parser call your code when a rule matches use the => operator.  For example:
 
-    import SwiftParser
-    class Adder : Parser {
-        var stack: Int[] = []
-        
-        func push(_ text: String) {
-            stack.append(text.toInt()!)
-        }
-        
-        func add() {
-            let left = stack.removeLast()
-            let right = stack.removeLast()
-            
-            stack.append(left + right)
-        }
+```swift
+import SwiftParser
+class Adder : Parser {
+var stack: Int[] = []
 
-		override init() {
-			super.init()
+func push(_ text: String) {
+    stack.append(text.toInt()!)
+}
 
-			self.grammar = Grammar { [unowned self] g in
-				g["number"] = ("0"-"9")+ => { [unowned self] parser in self.push(parser.text) }
-				return (^"number" ~ "+" ~ ^"number") => add
-			}
+func add() {
+    let left = stack.removeLast()
+    let right = stack.removeLast()
+
+    stack.append(left + right)
+}
+
+	override init() {
+		super.init()
+
+		self.grammar = Grammar { [unowned self] g in
+			g["number"] = ("0"-"9")+ => { [unowned self] parser in self.push(parser.text) }
+			return (^"number" ~ "+" ~ ^"number") => add
 		}
-    }
+	}
+}
+```
 
 This example displays several details about how to work with the parser.  The parser is defined in an object called `grammar` which defines named rules as well as a start rule, to tell the parser where to begin.
 
 The following code snippet is taken from one of the unit tests.  It show how to implement a parser containing  mutually recursive rules:
 
-	self.grammar = Grammar { [unowned self] g in
-		g["number"] = ("0"-"9")+ => { [unowned self] parser in self.push(parser.text) }
+```swift
+self.grammar = Grammar { [unowned self] g in
+	g["number"] = ("0"-"9")+ => { [unowned self] parser in self.push(parser.text) }
 
-		g["primary"] = ^"secondary" ~ (("+" ~ ^"secondary" => add) | ("-" ~ ^"secondary" => sub))*
-		g["secondary"] = ^"tertiary" ~ (("*" ~ ^"tertiary" => mul) | ("/" ~ ^"tertiary" => div))*
-		g["tertiary"] = ("(" ~ ^"primary" ~ ")") | ^"number"
+	g["primary"] = ^"secondary" ~ (("+" ~ ^"secondary" => add) | ("-" ~ ^"secondary" => sub))*
+	g["secondary"] = ^"tertiary" ~ (("*" ~ ^"tertiary" => mul) | ("/" ~ ^"tertiary" => div))*
+	g["tertiary"] = ("(" ~ ^"primary" ~ ")") | ^"number"
 
-		return (^"primary")*!*
-	}
+	return (^"primary")*!*
+}
+```
 
 ### Installation
 
